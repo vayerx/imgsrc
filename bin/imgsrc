@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+
+require 'parseconfig'
+require 'imgsrc'
+
+def load_dir( path )
+    return [path] unless File.directory?( path )
+    files = []
+    Dir.entries( path ).each do |f|
+        file = "#{path}/#{f}"
+        files << file if /.*jpe?g$/i =~ file && File.file?( file ) && File.readable?( file )
+    end rescue nil
+    files
+end
+
+def get_any_directory( paths )
+    native_dir = paths.index { |f| File.directory?(f) }
+    return paths[native_dir] if native_dir
+    file_dir = paths.index { |f| !File.dirname(f).empty? }
+    file_dir ? File.dirname(paths[file_dir]) : nil
+end
+
+FILTER = /d80|a5|nikon|canon|vayerx|paola|small|upload|show|flickr|gallery/i
+def guess_album_name( paths )
+    dir = get_any_directory( paths )
+    return nil unless dir
+    dir.split( File::SEPARATOR ).delete_if { |part| FILTER =~ part }.last
+end
+
+full_args = ARGV.map { |file| File.absolute_path( file )}
+files = []
+full_args.each { |arg| files += load_dir(arg) }
+if files.empty?
+    puts "no files"
+    exit
+end
+
+album_name = guess_album_name(full_args) || 'новый альбом'
+
+config = ParseConfig.new( ENV[ 'HOME' ] + '/.imgsrc.conf' )
+client = IMGSrc::API.new( config.get_value('user'), config.get_value('passwd') )
+client.login
+client.get_or_create_album album_name
+client.upload( album_name, files )

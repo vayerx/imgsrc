@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Encoding=UTF-8
+Exec=imgsrc %F
+Icon=stock_redo
+Name=Загрузить на iMGSRC
