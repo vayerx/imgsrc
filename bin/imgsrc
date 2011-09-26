@@ -1,20 +1,53 @@
 #!/usr/bin/env ruby
 # encoding: UTF-8
 
-require 'parseconfig'
-require 'imgsrc'
+#############################################################################
+#    imgsrc - iMGSRC.RU client                                              #
+#    (C) 2011, Vasiliy Yeremeyev <vayerx@gmail.com>                         #
+#                                                                           #
+#    This program is free software: you can redistribute it and/or modify   #
+#    it under the terms of the GNU General Public License as published by   #
+#    the Free Software Foundation, either version 3 of the License, or      #
+#    (at your option) any later version.                                    #
+#                                                                           #
+#    This program is distributed in the hope that it will be useful,        #
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+#    GNU General Public License for more details.                           #
+#                                                                           #
+#    You should have received a copy of the GNU General Public License      #
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.  #
+#############################################################################
 
-def load_dir( path )
-    return [path] unless File.directory?( path )
+require 'imgsrc'
+require 'parseconfig'
+require 'optiflag'
+#require 'progressbar'
+
+
+def load_dir(path)
+    return [path] unless File.directory?(path)
     files = []
-    Dir.entries( path ).each do |f|
+    Dir.entries(path).each do |f|
         file = "#{path}/#{f}"
-        files << file if /.*jpe?g$/i =~ file && File.file?( file ) && File.readable?( file )
+        files << file if /.+\.jpe?g$/i =~ file && File.file?(file) && File.readable?(file)
     end rescue nil
     files
 end
 
-def get_any_directory( paths )
+module ImgSrcOptions extend OptiFlagSet
+    # TODO postional options parser
+    optional_flag 'user', { :description => 'Username', :alternate_forms => ['u', 'username'] }
+    optional_flag 'passwd', { :description => 'User password, MD5', :alternate_forms => ['p', 'password', 'user_password'] }
+    optional_flag 'album', { :description => 'Album name', :alternate_forms => 'a' }
+    optional_flag 'album_pass', { :description => 'Album password', :alternate_forms => ['album_password', 'album_passwd'] }
+    optional_flag 'category', { :description => 'Category ID (TODO name)', :alternate_forms => 'c' }
+
+    and_process!
+end
+
+
+def get_any_directory(paths)
     native_dir = paths.index { |f| File.directory?(f) }
     return paths[native_dir] if native_dir
     file_dir = paths.index { |f| !File.dirname(f).empty? }
@@ -22,13 +55,14 @@ def get_any_directory( paths )
 end
 
 FILTER = /d80|a5|nikon|canon|vayerx|paola|small|upload|show|flickr|gallery/i
-def guess_album_name( paths )
-    dir = get_any_directory( paths )
+def guess_album_name(paths)
+    dir = get_any_directory(paths)
     return nil unless dir
-    dir.split( File::SEPARATOR ).delete_if { |part| FILTER =~ part }.last
+    dir.split(File::SEPARATOR).delete_if { |part| FILTER =~ part }.last
 end
 
-full_args = ARGV.map { |file| File.absolute_path( file )}
+# TODO strict positional opts
+full_args = ARGV.map { |file| file !~ /^-/ && File.exists?(file) ? File.expand_path(file) : nil }.compact
 files = []
 full_args.each { |arg| files += load_dir(arg) }
 if files.empty?
@@ -36,10 +70,15 @@ if files.empty?
     exit
 end
 
-album_name = guess_album_name(full_args) || 'новый альбом'
+config = ParseConfig.new(RUBY_PLATFORM =~ /linux|bsd|darwin|cygwin/i ? File.expand_path('~/.imgsrc.conf') : 'imgsrc.ini')
+user_name = ARGV.flags.user || config.get_value('user')
+user_pass = ARGV.flags.passwd || config.get_value('passwd')
+album_name = ARGV.flags.album || guess_album_name(full_args) || 'новый альбом'
+album_opts = {}
+album_opts[:passwd] = ARGV.flags.album_pass if ARGV.flags.album_pass
+album_opts[:category] = ARGV.flags.category if ARGV.flags.category
 
-config = ParseConfig.new( ENV[ 'HOME' ] + '/.imgsrc.conf' )
-client = IMGSrc::API.new( config.get_value('user'), config.get_value('passwd') )
+client = IMGSrc::API.new(user_name, user_pass)
 client.login
-client.get_or_create_album album_name
-client.upload( album_name, files )
+client.get_or_create_album(album_name, album_opts)
+client.upload(album_name, files)
