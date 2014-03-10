@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require 'io/console'
+require 'digest/md5'
+require 'fileutils'
+
+print 'Username: '; username = gets
+print 'Password: '; password = STDIN.noecho(&:gets).chomp
+puts
+
+filename = File.expand_path('~/.imgsrc.conf')
+FileUtils.mv(filename, "#{filename}.bak")
+File.open(filename, 'w') do |conf|
+    conf.puts "user=#{username}"
+    conf.puts "passwd=#{Digest::MD5.hexdigest(password)}"
+end
+
