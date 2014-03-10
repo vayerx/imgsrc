@@ -32,7 +32,7 @@ def load_dir(path)
         file = "#{path}/#{f}"
         files << file if /.+\.jpe?g$/i =~ file && File.file?(file) && File.readable?(file)
     end rescue nil
-    files
+    files.sort!
 end
 
 module ImgSrcOptions extend OptiFlagSet
@@ -54,7 +54,7 @@ def get_any_directory(paths)
     file_dir ? File.dirname(paths[file_dir]) : nil
 end
 
-FILTER = /d80|a5|nikon|canon|vayerx|paola|small|upload|show|flickr|gallery/i
+FILTER = /d80|a5|nikon|canon|vayerx|paola|small|upload|show|flickr|gallery|best/i
 def guess_album_name(paths)
     dir = get_any_directory(paths)
     return nil unless dir
@@ -71,8 +71,8 @@ if files.empty?
 end
 
 config = ParseConfig.new(RUBY_PLATFORM =~ /linux|bsd|darwin|cygwin/i ? File.expand_path('~/.imgsrc.conf') : 'imgsrc.ini')
-user_name = ARGV.flags.user || config.get_value('user')
-user_pass = ARGV.flags.passwd || config.get_value('passwd')
+user_name = ARGV.flags.user || config['user']
+user_pass = ARGV.flags.passwd || config['passwd']
 album_name = ARGV.flags.album || guess_album_name(full_args) || 'новый альбом'
 album_opts = {}
 album_opts[:passwd] = ARGV.flags.album_pass if ARGV.flags.album_pass
