@@ -209,6 +209,11 @@ module IMGSrc
                 post_body << headers.join
                 post_body << (encoding == :base64 ? Base64.encode64(data) : data)
                 post_body << "\r\n"
+
+                post_body << "--#{BOUNDARY}\r\n"
+                post_body << "Content-Disposition: form-data; name=\"rotate\"\r\n"
+                post_body << "\r\n"
+                post_body << "on\r\n"
             end
             post_body << "--#{BOUNDARY}--\r\n"
 

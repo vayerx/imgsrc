@@ -2,7 +2,7 @@ require File.expand_path('lib/imgsrc', File.dirname(__FILE__))
 
 spec = Gem::Specification.new do |s|
     s.name = 'imgsrc'
-    s.version = "#{IMGSrc::API::PROTO_VER}.5"
+    s.version = "#{IMGSrc::API::PROTO_VER}.6"
     s.summary = 'iMGSRC photo-hosting client.'
     s.description = 'Simple client for imgsrc.ru photo-hosting' # TODO : library, console-client, gui-client.'
     s.author = 'Vasiliy Yeremeyev'
